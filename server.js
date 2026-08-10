@@ -5,7 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const fs = require('fs');
-const { initDB, getQuizQuestions, saveGameResult, addInstitution, checkInstitutionLogin, uploadCSVQuestions } = require('./config/google-sheets');
+const { initDB, getQuizQuestions, saveGameResult, addInstitution, checkInstitutionLogin, uploadCSVQuestions, getAllInstitutions, deleteInstitution } = require('./config/google-sheets');
 
 const app = express();
 app.use(express.json());
@@ -112,7 +112,24 @@ app.post('/api/admin/institutions', async (req, res) => {
   }
 });
 
-// 3. Institution Login
+// 3. Super Admin: Get All Institutions
+app.get('/api/admin/institutions', async (req, res) => {
+  const institutions = await getAllInstitutions();
+  res.json(institutions);
+});
+
+// 4. Super Admin: Delete Institution
+app.delete('/api/admin/institutions/:id', async (req, res) => {
+  const { id } = req.params;
+  const success = await deleteInstitution(id);
+  if (success) {
+    res.json({ message: 'Institution deleted successfully' });
+  } else {
+    res.status(500).json({ error: 'Failed to delete institution' });
+  }
+});
+
+// 5. Institution Login
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (username === 'superadmin' && password === 'superadmin123') {

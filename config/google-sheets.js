@@ -176,4 +176,55 @@ async function uploadCSVQuestions(questions) {
   }
 }
 
-module.exports = { initDB, getQuizQuestions, saveGameResult, addInstitution, checkInstitutionLogin, uploadCSVQuestions };
+async function getAllInstitutions() {
+  if (!sheetsAPI) return [];
+  try {
+    const response = await sheetsAPI.spreadsheets.values.get({
+      spreadsheetId: DOC_ID,
+      range: 'Institutions!A:F',
+    });
+    const rows = response.data.values || [];
+    return rows.map(row => ({
+      id: row[0],
+      name: row[1],
+      username: row[2],
+      maxStudents: row[4],
+      status: row[5] || 'Active'
+    }));
+  } catch (err) {
+    console.error("Error fetching institutions:", err.message);
+    return [];
+  }
+}
+
+async function deleteInstitution(id) {
+  if (!sheetsAPI) return false;
+  try {
+    // 1. Get all to find the row index
+    const response = await sheetsAPI.spreadsheets.values.get({
+      spreadsheetId: DOC_ID,
+      range: 'Institutions!A:F',
+    });
+    const rows = response.data.values || [];
+    const rowIndex = rows.findIndex(row => row[0] === id);
+    
+    if (rowIndex === -1) return false;
+    
+    // 2. Update the status column (F, which is index 5) to 'Deleted'
+    // Row index in sheet is 1-based. So rowIndex + 1.
+    const sheetRow = rowIndex + 1;
+    await sheetsAPI.spreadsheets.values.update({
+      spreadsheetId: DOC_ID,
+      range: `Institutions!F${sheetRow}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [['Deleted']] }
+    });
+    
+    return true;
+  } catch (err) {
+    console.error("Error deleting institution:", err.message);
+    return false;
+  }
+}
+
+module.exports = { initDB, getQuizQuestions, saveGameResult, addInstitution, checkInstitutionLogin, uploadCSVQuestions, getAllInstitutions, deleteInstitution };
